@@ -46,10 +46,11 @@ public class UserInput : MonoBehaviour {
     private BoardCommandInvoker boardCommandInvoker;
     #endregion
 
-    #region variables for piece movement
+    #region variables for user actions
     private CellOccupiedStateSO selectedCellStateSO = null;
-    private Piece selectedGridObjectPiece = null;
-    private TeleportGate selectedGridObjectGate = null;
+    private GridObject selectedGridObject = null;
+    //private Piece selectedGridObjectPiece = null;
+    //private TeleportGate selectedGridObjectGate = null;
     private int selectedPieceGridIndex = -1;
     #endregion
 
@@ -75,7 +76,7 @@ public class UserInput : MonoBehaviour {
         if (!Input.GetMouseButtonDown(0)) return;
         Vector3 clickPosition = UtilsClass.GetMouseWorldPosition();
         if (!gridList[gridInUseIndex].IsInGrid(clickPosition)) return;
-        if (selectedCellStateSO != null || selectedGridObjectPiece != null || selectedGridObjectGate != null) {
+        if (selectedCellStateSO != null || selectedGridObject != null) {
             HandlePlacementUserAction(clickPosition);
         } else {
             HandleSelectionUserAction(clickPosition);
@@ -115,8 +116,8 @@ public class UserInput : MonoBehaviour {
         if (gridList[gridInUseIndex].GetGridObject(clickPosition) != null) {
             Piece piece = gridList[gridInUseIndex].GetGridObject(clickPosition).GetComponent<Piece>();
             if (piece != null) {
-                selectedGridObjectPiece = piece;
-                HighlightPossibleMove(true, selectedGridObjectPiece);
+                selectedGridObject = piece;
+                HighlightPossibleMove(true, piece);
                 selectedPieceGridIndex = gridInUseIndex;
                 selectedCellStateSO = null;
             }
@@ -126,25 +127,32 @@ public class UserInput : MonoBehaviour {
     private void HandlePlacementUserAction(Vector3 clickPosition) {
         if (selectedCellStateSO != null) {
             SetCellState(gridList[gridInUseIndex], clickPosition);
-        } else if (selectedGridObjectPiece != null) {
-            HandlePieceAction(clickPosition);
-        } else if (selectedGridObjectGate != null) {
-            SetTeleportGate(gridList[gridInUseIndex], clickPosition);
+        } else if (selectedGridObject != null) {
+
+            if (selectedGridObject.GetComponent<Piece>() != null) {
+                HandlePieceAction(clickPosition);
+            } else if (selectedGridObject.GetComponent<TeleportGate>() != null) {
+                SetGridObject(gridList[gridInUseIndex], clickPosition);
+            } else if (selectedGridObject.GetComponent<Stone>() != null) {
+                SetGridObject(gridList[gridInUseIndex], clickPosition);
+            }
+            //} else if (selectedGridObjectGate != null) {
+            //SetTeleportGate(gridList[gridInUseIndex], clickPosition);
         }
     }
 
     private void HandlePieceAction(Vector3 clickPosition) {
 
-        if (FindGridObjectFromAllGrid(selectedGridObjectPiece.GetComponent<GridObject>(), out int gridIndexFound, out int xFound, out int yFound)) {
+        if (FindGridObjectFromAllGrid(selectedGridObject.GetComponent<GridObject>(), out int gridIndexFound, out int xFound, out int yFound)) {
             // selected piece is from grid, move piece
 
             if (gridList[gridInUseIndex].GetGridObject(clickPosition) != null) {
 
 
-                if (selectedGridObjectPiece == gridList[gridInUseIndex].GetGridObject(clickPosition).GetComponent<Piece>()) {
+                if (selectedGridObject == gridList[gridInUseIndex].GetGridObject(clickPosition).GetComponent<Piece>()) {
                     // click same piece, remove selected piece
                     HighlightPossibleMove(false, null);
-                    selectedGridObjectPiece = null;
+                    selectedGridObject = null;
                     return;
                 }
                 if (!canOverride) {
@@ -155,25 +163,24 @@ public class UserInput : MonoBehaviour {
             if (!canOverride) {
                 // can only move to cell with self or empty stateSO 
                 if (gridList[gridInUseIndex].GetCell(clickPosition).GetOccupiedState().stateName != emptySO.stateName &&
-                    gridList[gridInUseIndex].GetCell(clickPosition).GetOccupiedState().stateName != selectedGridObjectPiece.GetCellStateSO().stateName) {
+                    gridList[gridInUseIndex].GetCell(clickPosition).GetOccupiedState().stateName != selectedGridObject.GetCellStateSO().stateName) {
                     return;
                 }
             }
 
             if (selectedPieceGridIndex != gridInUseIndex) {
-                MovePieceAcrossGrid(gridList[selectedPieceGridIndex], gridList[gridInUseIndex], clickPosition, selectedGridObjectPiece.GetComponent<Piece>());
+                MovePieceAcrossGrid(gridList[selectedPieceGridIndex], gridList[gridInUseIndex], clickPosition, selectedGridObject.GetComponent<Piece>());
             } else {
-                MovePieceInSameGrid(gridList[selectedPieceGridIndex], clickPosition, selectedGridObjectPiece.GetComponent<Piece>());
+                MovePieceInSameGrid(gridList[selectedPieceGridIndex], clickPosition, selectedGridObject.GetComponent<Piece>());
             }
         } else {
             // selected piece is not from grid, set piece
-            SetPiece(gridList[gridInUseIndex], clickPosition);
+            SetGridObject(gridList[gridInUseIndex], clickPosition);
         }
     }
 
     private void HandlePostPlayerAction() {
-        selectedGridObjectGate = null;
-        selectedGridObjectPiece = null;
+        selectedGridObject = null;
         HighlightPossibleMove(false, null);
         selectedCellStateSO = null;
         ClearRedoStack();
@@ -181,12 +188,8 @@ public class UserInput : MonoBehaviour {
     }
 
     #region Player Action Execution
-    private void SetPiece(Grid grid, Vector3 clickPosition) {
-        boardCommandInvoker.AddCommand(new SetGridObjectCommand(grid, clickPosition, selectedGridObjectPiece));
-        HandlePostPlayerAction();
-    }
-    private void SetTeleportGate(Grid grid, Vector3 clickPosition) {
-        boardCommandInvoker.AddCommand(new SetGridObjectCommand(grid, clickPosition, selectedGridObjectGate));
+    private void SetGridObject(Grid grid, Vector3 clickPosition) {
+        boardCommandInvoker.AddCommand(new SetGridObjectCommand(grid, clickPosition, selectedGridObject));
         HandlePostPlayerAction();
     }
     private void SetCellState(Grid grid, Vector3 clickPosition) {
@@ -197,11 +200,17 @@ public class UserInput : MonoBehaviour {
 
         grid.FindGridObject(pieceMoving, out int xFound, out int yFound);
         gridList[gridInUseIndex].GetXY(clickPosition, out int xTarget, out int yTarget);
-        if (selectedGridObjectPiece.IsMoveValid(xFound, yFound, xTarget, yTarget)) {
-            Vector3 pieceOriginalPosition = grid.GetWorldPosition(xFound, yFound);
-            boardCommandInvoker.AddCommand(new MovePieceCommand(grid, grid, pieceOriginalPosition, clickPosition));
-            HandlePostPlayerAction();
+
+        List<(int, int)> moveList = gridList[gridInUseIndex].GetAllPossibleMove(pieceMoving, emptySO);
+        foreach (var move in moveList) {
+            if ((xTarget, yTarget) == move) {
+                Vector3 pieceOriginalPosition = grid.GetWorldPosition(xFound, yFound);
+                boardCommandInvoker.AddCommand(new MovePieceCommand(grid, grid, pieceOriginalPosition, clickPosition));
+                HandlePostPlayerAction();
+                return;
+            }
         }
+
     }
     private void MovePieceAcrossGrid(Grid originGrid, Grid destinationGrid, Vector3 clickPosition, Piece pieceMoving) {
         // check if can move (teleport)
@@ -253,16 +262,14 @@ public class UserInput : MonoBehaviour {
         boardCommandInvoker.Undo();
         selectedCellStateSO = null;
         HighlightPossibleMove(false, null);
-        selectedGridObjectPiece = null;
-        selectedGridObjectGate = null;
+        selectedGridObject = null;
         UpdateScore();
     }
     public void RedoPreviousMove() {
         boardCommandInvoker.Redo();
         selectedCellStateSO = null;
         HighlightPossibleMove(false, null);
-        selectedGridObjectPiece = null;
-        selectedGridObjectGate = null;
+        selectedGridObject = null;
         UpdateScore();
     }
     public void ChangeGridInUse(int changeIndex) {
@@ -327,18 +334,19 @@ public class UserInput : MonoBehaviour {
     #region UI related methods
     public void ButtonSetSelectCellStateSO(ButtonSelectCellStateSO button) {
         selectedCellStateSO = button.GetCellStateSO();
-        selectedGridObjectPiece = null;
-        selectedGridObjectGate = null;
+        selectedGridObject = null;
     }
     public void ButtonSetSelectPiece(ButtonSelectPiece button) {
-        selectedGridObjectPiece = button.GetPiecePrefab();
+        selectedGridObject = button.GetPiecePrefab();
         selectedCellStateSO = null;
-        selectedGridObjectGate = null;
     }
     public void ButtonSetSelectGate(ButtonSelectTeleportGate button) {
-        selectedGridObjectGate = button.GetGatePrefab();
+        selectedGridObject = button.GetGatePrefab();
         selectedCellStateSO = null;
-        selectedGridObjectPiece = null;
+    }
+    public void ButtonSetSelectStone(ButtonSelectStone button) {
+        selectedGridObject = button.GetGatePrefab();
+        selectedCellStateSO = null;
     }
     public void SetGridDimension(int dimension) {
         this.gridWidth = dimension;

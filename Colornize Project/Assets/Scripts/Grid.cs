@@ -1,9 +1,5 @@
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using Unity.VisualScripting;
-using UnityEditor.SearchService;
 using UnityEngine;
-using static UnityEngine.EventSystems.EventTrigger;
 
 public class Grid {
 
@@ -230,7 +226,7 @@ public class Grid {
         }
     }
 
-    private List<(int, int)> GetAllPossibleMove(Piece piece, CellOccupiedStateSO emptySO) {
+    public List<(int, int)> GetAllPossibleMove(Piece piece, CellOccupiedStateSO emptySO) {
         List<(int, int)> moveList = new List<(int, int)>();
 
         FindGridObject(piece, out int xFound, out int yFound);
@@ -252,7 +248,10 @@ public class Grid {
             if (gridObjectArray[xFound, y] != null) {
                 if ((gridObjectArray[xFound, y].GetComponent<Piece>() != null)
                 && (gridObjectArray[xFound, y].GetComponent<Piece>().GetCellStateSO().stateName == piece.GetCellStateSO().stateName)) {
-                    moveList.Add((xFound, y + 1));
+                    if (cellArray[xFound, y + 1].GetOccupiedState().stateName == piece.GetCellStateSO().stateName
+                        || cellArray[xFound, y + 1].GetOccupiedState().stateName == emptySO.stateName) {
+                        moveList.Add((xFound, y + 1));
+                    }
                 }
                 break;
             }
@@ -262,7 +261,10 @@ public class Grid {
             if ((gridObjectArray[xFound, y] != null)) {
                 if ((gridObjectArray[xFound, y].GetComponent<Piece>() != null)
                 && (gridObjectArray[xFound, y].GetComponent<Piece>().GetCellStateSO().stateName == piece.GetCellStateSO().stateName)) {
-                    moveList.Add((xFound, y - 1));
+                    if (cellArray[xFound, y - 1].GetOccupiedState().stateName == piece.GetCellStateSO().stateName
+                    || cellArray[xFound, y - 1].GetOccupiedState().stateName == emptySO.stateName) {
+                        moveList.Add((xFound, y - 1));
+                    }
                 }
                 break;
             }
@@ -272,7 +274,10 @@ public class Grid {
             if ((gridObjectArray[x, yFound] != null)) {
                 if ((gridObjectArray[x, yFound].GetComponent<Piece>() != null)
                 && (gridObjectArray[x, yFound].GetComponent<Piece>().GetCellStateSO().stateName == piece.GetCellStateSO().stateName)) {
-                    moveList.Add((x + 1, yFound));
+                    if (cellArray[x + 1, yFound].GetOccupiedState().stateName == piece.GetCellStateSO().stateName
+                    || cellArray[x + 1, yFound].GetOccupiedState().stateName == emptySO.stateName) {
+                        moveList.Add((x + 1, yFound));
+                    }
                 }
                 break;
             }
@@ -282,7 +287,10 @@ public class Grid {
             if ((gridObjectArray[x, yFound] != null)) {
                 if ((gridObjectArray[x, yFound].GetComponent<Piece>() != null)
                 && (gridObjectArray[x, yFound].GetComponent<Piece>().GetCellStateSO().stateName == piece.GetCellStateSO().stateName)) {
-                    moveList.Add((x - 1, yFound));
+                    if (cellArray[x - 1, yFound].GetOccupiedState().stateName == piece.GetCellStateSO().stateName
+                    || cellArray[x - 1, yFound].GetOccupiedState().stateName == emptySO.stateName) {
+                        moveList.Add((x - 1, yFound));
+                    }
                 }
                 break;
             }

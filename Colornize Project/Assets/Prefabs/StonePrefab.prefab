@@ -127,7 +127,7 @@ SortingGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2030135142065196000}
   m_Enabled: 1
-  m_SortingLayerID: 939931181
+  m_SortingLayerID: 737481267
   m_SortingLayer: 2
   m_SortingOrder: 0
   m_SortAtRoot: 0
@@ -276,8 +276,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36
-  m_fontSizeBase: 36
+  m_fontSize: 24
+  m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
